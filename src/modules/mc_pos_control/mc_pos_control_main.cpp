@@ -484,6 +484,10 @@ MulticopterPositionControl::set_vehicle_states(const float &vel_sp_z)
 		_vel_y_deriv.update(0.0f);
 	}
 
+	// Typhon adaptation:
+	// Workaround for issue where z velocity was being set to zero in altitude PID controller
+	_states.velocity(2) = _local_pos.vz;
+
 	if (_param_mpc_alt_mode.get() && _local_pos.dist_bottom_valid && PX4_ISFINITE(_local_pos.dist_bottom_rate)) {
 		// terrain following
 		_states.velocity(2) = -_local_pos.dist_bottom_rate;

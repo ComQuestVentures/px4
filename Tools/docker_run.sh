@@ -14,7 +14,7 @@ if [ -z ${PX4_DOCKER_REPO+x} ]; then
 	elif [[ $@ =~ .*ocpoc.* ]]; then
 		# aerotennaocpoc_ubuntu
 		PX4_DOCKER_REPO="px4io/px4-dev-armhf:2019-03-08"
-	elif [[ $@ =~ .*clang.* ]] || [[ $@ =~ .*scan-build.* ]]; then	
+	elif [[ $@ =~ .*clang.* ]] || [[ $@ =~ .*scan-build.* ]]; then
 		# clang tools
 		PX4_DOCKER_REPO="px4io/px4-dev-clang:2019-03-08"
 	elif [[ $@ =~ .*tests* ]]; then
@@ -61,7 +61,7 @@ docker run -it --rm -w "${SRC_DIR}" \
 	--env=PX4_UBSAN \
 	--env=TRAVIS_BRANCH \
 	--env=TRAVIS_BUILD_ID \
-	--publish 14556:14556/udp \
+	--network host \
 	--volume=${CCACHE_DIR}:${CCACHE_DIR}:rw \
 	--volume=${SRC_DIR}:${SRC_DIR}:rw \
 	${PX4_DOCKER_REPO} /bin/bash -c "$1 $2 $3"

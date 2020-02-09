@@ -85,83 +85,16 @@ mavlink_hil_actuator_controls_t Simulator::actuator_controls_from_outputs(const 
 
 	const float pwm_center = (PWM_DEFAULT_MAX + PWM_DEFAULT_MIN) / 2;
 
-	int _system_type = _param_mav_type.get();
-
-	/* scale outputs depending on system type */
-	if (_system_type == MAV_TYPE_QUADROTOR ||
-	    _system_type == MAV_TYPE_HEXAROTOR ||
-	    _system_type == MAV_TYPE_OCTOROTOR ||
-	    _system_type == MAV_TYPE_VTOL_DUOROTOR ||
-	    _system_type == MAV_TYPE_VTOL_QUADROTOR ||
-	    _system_type == MAV_TYPE_VTOL_TILTROTOR ||
-	    _system_type == MAV_TYPE_VTOL_RESERVED2) {
-
-		/* multirotors: set number of rotor outputs depending on type */
-
-		unsigned n;
-
-		switch (_system_type) {
-		case MAV_TYPE_VTOL_DUOROTOR:
-			n = 2;
-			break;
-
-		case MAV_TYPE_QUADROTOR:
-		case MAV_TYPE_VTOL_QUADROTOR:
-		case MAV_TYPE_VTOL_TILTROTOR:
-			n = 4;
-			break;
-
-		case MAV_TYPE_VTOL_RESERVED2:
-			// this is the standard VTOL / quad plane with 5 propellers
-			n = 5;
-			break;
-
-		case MAV_TYPE_HEXAROTOR:
-			n = 6;
-			break;
-
-		default:
-			n = 8;
-			break;
-		}
-
-		for (unsigned i = 0; i < 16; i++) {
-			if (actuators.output[i] > PWM_DEFAULT_MIN / 2) {
-				if (i < n) {
-					/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to 0..1 for rotors */
-					msg.controls[i] = (actuators.output[i] - PWM_DEFAULT_MIN) / (PWM_DEFAULT_MAX - PWM_DEFAULT_MIN);
-
-				} else {
-					/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to -1..1 for other channels */
-					msg.controls[i] = (actuators.output[i] - pwm_center) / ((PWM_DEFAULT_MAX - PWM_DEFAULT_MIN) / 2);
-				}
-
-			} else {
-				/* send 0 when disarmed and for disabled channels */
-				msg.controls[i] = 0.0f;
-			}
-		}
-
-	} else {
-		/* fixed wing: scale throttle to 0..1 and other channels to -1..1 */
-
-		for (unsigned i = 0; i < 16; i++) {
-			if (actuators.output[i] > PWM_DEFAULT_MIN / 2) {
-				if (i != 4) {
-					/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to -1..1 for normal channels */
-					msg.controls[i] = (actuators.output[i] - pwm_center) / ((PWM_DEFAULT_MAX - PWM_DEFAULT_MIN) / 2);
-
-				} else {
-					/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to 0..1 for throttle */
-					msg.controls[i] = (actuators.output[i] - PWM_DEFAULT_MIN) / (PWM_DEFAULT_MAX - PWM_DEFAULT_MIN);
-				}
-
-			} else {
-				/* set 0 for disabled channels */
-				msg.controls[i] = 0.0f;
-			}
-		}
-	}
+	 // Typhon adaptation
+        for (unsigned i = 0; i < 16; i++) {
+		if (actuators.output[i] > PWM_DEFAULT_MIN / 2) {
+			/* scale PWM out 900..2100 us to -1..1 for normal channels */
+			msg.controls[i] = (actuators.output[i] - pwm_center) / ((PWM_DEFAULT_MAX - PWM_DEFAULT_MIN) / 2);
+		} else {
+			/* set 0 for disabled channels */
+			msg.controls[i] = 0.0f;
+ 		}
+ 	}
 
 	msg.mode = mode_flag_custom;
 	msg.mode |= (armed) ? mode_flag_armed : 0;
@@ -420,6 +353,10 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 	uint64_t timestamp = hrt_absolute_time();
 
+	struct timespec ts;
+	abstime_to_ts(&ts, hil_state.time_usec);
+	px4_clock_settime(CLOCK_MONOTONIC, &ts);
+
 	/* attitude */
 	struct vehicle_attitude_s hil_attitude = {};
 	{
@@ -434,7 +371,7 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 		// always publish ground truth attitude message
 		int hilstate_multi;
-		orb_publish_auto(ORB_ID(vehicle_attitude_groundtruth), &_attitude_pub, &hil_attitude, &hilstate_multi, ORB_PRIO_HIGH);
+		orb_publish_auto(ORB_ID(vehicle_attitude), &_attitude_pub, &hil_attitude, &hilstate_multi, ORB_PRIO_HIGH);
 	}
 
 	/* global position */
@@ -442,8 +379,8 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 	{
 		hil_gpos.timestamp = timestamp;
 
-		hil_gpos.lat = hil_state.lat / 1E7;//1E7
-		hil_gpos.lon = hil_state.lon / 1E7;//1E7
+		hil_gpos.lat = double(hil_state.lat) / double(1E7);//1E7
+		hil_gpos.lon = double(hil_state.lon) / double(1E7);//1E7
 		hil_gpos.alt = hil_state.alt / 1E3;//1E3
 
 		hil_gpos.vel_n = hil_state.vx / 100.0f;
@@ -452,7 +389,7 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 		// always publish ground truth attitude message
 		int hil_gpos_multi;
-		orb_publish_auto(ORB_ID(vehicle_global_position_groundtruth), &_gpos_pub, &hil_gpos, &hil_gpos_multi, ORB_PRIO_HIGH);
+		orb_publish_auto(ORB_ID(vehicle_global_position), &_gpos_pub, &hil_gpos, &hil_gpos_multi, ORB_PRIO_HIGH);
 	}
 
 	/* local position */
@@ -463,7 +400,8 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 		double lat = hil_state.lat * 1e-7;
 		double lon = hil_state.lon * 1e-7;
 
-		if (!_hil_local_proj_inited) {
+		bool armed = (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED);
+		if (!armed) {
 			_hil_local_proj_inited = true;
 			map_projection_init(&_hil_local_proj_ref, lat, lon);
 			_hil_ref_timestamp = timestamp;
@@ -501,8 +439,27 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 		// always publish ground truth attitude message
 		int hil_lpos_multi;
-		orb_publish_auto(ORB_ID(vehicle_local_position_groundtruth), &_lpos_pub, &hil_lpos, &hil_lpos_multi, ORB_PRIO_HIGH);
+		orb_publish_auto(ORB_ID(vehicle_local_position), &_lpos_pub, &hil_lpos, &hil_lpos_multi, ORB_PRIO_HIGH);
 	}
+
+	/* accelerometer */
+	{
+		sensor_accel_s accel = {};
+
+		accel.timestamp = timestamp;
+		accel.x_raw = hil_state.xacc;
+		accel.y_raw = hil_state.yacc;
+		accel.z_raw = hil_state.zacc;
+		accel.x = hil_state.xacc / 1000.0f * CONSTANTS_ONE_G;
+		accel.y = hil_state.yacc / 1000.0f * CONSTANTS_ONE_G;
+		accel.z = hil_state.zacc / 1000.0f * CONSTANTS_ONE_G;
+		accel.temperature = 25.0f;
+
+		int accel_multi;
+		orb_publish_auto(ORB_ID(sensor_accel), &_lpos_pub, &accel, &accel_multi, ORB_PRIO_HIGH);
+	}
+
+
 }
 
 void Simulator::handle_message_landing_target(const mavlink_message_t *msg)
