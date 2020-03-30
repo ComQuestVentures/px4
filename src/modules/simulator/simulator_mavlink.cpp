@@ -459,6 +459,23 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 		orb_publish_auto(ORB_ID(sensor_accel), &_lpos_pub, &accel, &accel_multi, ORB_PRIO_HIGH);
 	}
 
+	/* gyro */
+	{
+		sensor_gyro_s gyro = {};
+
+		gyro.timestamp = timestamp;
+		gyro.device_id = 2293768;
+		gyro.x_raw = hil_state.rollspeed * 1000.0f;
+		gyro.y_raw = hil_state.pitchspeed * 1000.0f;
+		gyro.z_raw = hil_state.yawspeed * 1000.0f;
+		gyro.x = hil_state.rollspeed;
+		gyro.y = hil_state.pitchspeed;
+		gyro.z = hil_state.yawspeed;
+		gyro.temperature = 25.0f;
+
+		int gyro_multi;
+		orb_publish_auto(ORB_ID(sensor_gyro), &_gyro_pub, &gyro, &gyro_multi, ORB_PRIO_HIGH);
+	}
 
 }
 
