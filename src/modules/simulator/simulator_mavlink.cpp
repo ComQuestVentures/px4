@@ -456,7 +456,7 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 		accel.temperature = 25.0f;
 
 		int accel_multi;
-		orb_publish_auto(ORB_ID(sensor_accel), &_lpos_pub, &accel, &accel_multi, ORB_PRIO_HIGH);
+		orb_publish_auto(ORB_ID(sensor_accel), &_accel_pub, &accel, &accel_multi, ORB_PRIO_HIGH);
 	}
 
 	/* gyro */
