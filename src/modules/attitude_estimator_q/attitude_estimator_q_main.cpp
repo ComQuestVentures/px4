@@ -330,10 +330,11 @@ void AttitudeEstimatorQ::task_main()
 				_mag(1) = magnetometer.magnetometer_ga[1];
 				_mag(2) = magnetometer.magnetometer_ga[2];
 
-				if (_mag.length() < 0.01f) {
-					PX4_ERR("degenerate mag!");
-					continue;
-				}
+				// Typhon: Disable this check for state level simulation
+				//if (_mag.length() < 0.01f) {
+				//	PX4_ERR("degenerate mag!");
+				//	continue;
+				//}
 			}
 
 		}
