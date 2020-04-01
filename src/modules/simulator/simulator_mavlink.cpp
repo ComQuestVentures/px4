@@ -48,6 +48,7 @@
 #include <pthread.h>
 #include <conversion/rotation.h>
 #include <mathlib/mathlib.h>
+#include <uORB/topics/airspeed.h>//CQV
 
 #include <limits>
 
@@ -475,6 +476,19 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 		int gyro_multi;
 		orb_publish_auto(ORB_ID(sensor_gyro), &_gyro_pub, &gyro, &gyro_multi, ORB_PRIO_HIGH);
+	}
+
+	/* airspeed */
+	{
+		struct airspeed_s airspeed = {};
+
+		airspeed.timestamp = timestamp;
+		airspeed.indicated_airspeed_m_s = hil_state.ind_airspeed / 100.0f;
+		airspeed.true_airspeed_m_s = hil_state.true_airspeed / 100.0f;
+
+		int airspeed_multi;
+		orb_publish_auto(ORB_ID(airspeed), &_airspeed_pub, &airspeed, &airspeed_multi, ORB_PRIO_HIGH);
+
 	}
 
 }
