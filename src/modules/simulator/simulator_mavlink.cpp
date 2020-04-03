@@ -388,6 +388,9 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 		hil_gpos.vel_e = hil_state.vy / 100.0f;
 		hil_gpos.vel_d = hil_state.vz / 100.0f;
 
+		hil_gpos.eph = 2.0f;
+		hil_gpos.epv = 4.0f;
+
 		// always publish ground truth attitude message
 		int hil_gpos_multi;
 		orb_publish_auto(ORB_ID(vehicle_global_position), &_gpos_pub, &hil_gpos, &hil_gpos_multi, ORB_PRIO_HIGH);
