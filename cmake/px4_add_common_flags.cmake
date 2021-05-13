@@ -79,6 +79,7 @@ function(px4_add_common_flags)
 		-Wuninitialized
 		-Wunknown-pragmas
 		-Wunused-variable
+		-Wno-char-subscripts
 
 		# disabled warnings
 		-Wno-implicit-fallthrough # set appropriate level and update
