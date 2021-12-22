@@ -73,7 +73,6 @@ function(px4_add_common_flags)
 		-Wfloat-equal
 		-Wformat-security
 		-Winit-self
-		-Wlogical-op
 		-Wpointer-arith
 		-Wshadow
 		-Wuninitialized
