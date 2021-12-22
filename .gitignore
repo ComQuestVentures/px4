@@ -66,3 +66,5 @@ posix-configs/SITL/init/test/*_generated
 .coverage.*
 
 python_dev/
+.venv
+venv
