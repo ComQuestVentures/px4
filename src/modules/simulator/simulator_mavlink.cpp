@@ -48,7 +48,7 @@
 #include <pthread.h>
 #include <conversion/rotation.h>
 #include <mathlib/mathlib.h>
-#include <uORB/topics/airspeed.h>//CQV
+#include <uORB/topics/airspeed.h>
 
 #include <limits>
 
@@ -86,7 +86,6 @@ mavlink_hil_actuator_controls_t Simulator::actuator_controls_from_outputs(const 
 
 	const float pwm_center = (PWM_DEFAULT_MAX + PWM_DEFAULT_MIN) / 2;
 
-	 // Typhon adaptation
         for (unsigned i = 0; i < 16; i++) {
 		if (actuators.output[i] > PWM_DEFAULT_MIN / 2) {
 			/* scale PWM out 900..2100 us to -1..1 for normal channels */
