@@ -45,6 +45,7 @@
 #include <conversion/rotation.h>
 #include <mathlib/mathlib.h>
 #include <lib/drivers/device/Device.hpp>
+#include <lib/airspeed/airspeed.h>
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -97,97 +98,16 @@ void Simulator::actuator_controls_from_outputs(mavlink_hil_actuator_controls_t *
 
 	bool armed = (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED);
 
-	int _system_type = _param_mav_type.get();
+	for (unsigned i = 0; i < actuator_outputs_s::NUM_ACTUATOR_OUTPUTS; i++) {
+		if (!armed) {
+			/* send 0 when disarmed and for disabled channels */
+			msg->controls[i] = -1.0f;
 
-	if (_use_dynamic_mixing) {
-		if (armed) {
-			for (unsigned i = 0; i < actuator_outputs_s::NUM_ACTUATOR_OUTPUTS; i++) {
-				msg->controls[i] = _actuator_outputs.output[i];
-			}
-		}
-
-	} else {
-		/* 'pos_thrust_motors_count' indicates number of motor channels which are configured with 0..1 range (positive thrust)
-		all other motors are configured for -1..1 range */
-		unsigned pos_thrust_motors_count;
-		bool is_fixed_wing;
-
-		switch (_system_type) {
-		case MAV_TYPE_AIRSHIP:
-		case MAV_TYPE_VTOL_TAILSITTER_DUOROTOR:
-		case MAV_TYPE_COAXIAL:
-			pos_thrust_motors_count = 2;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_TRICOPTER:
-			pos_thrust_motors_count = 3;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_QUADROTOR:
-		case MAV_TYPE_VTOL_TAILSITTER_QUADROTOR:
-		case MAV_TYPE_VTOL_TILTROTOR:
-			pos_thrust_motors_count = 4;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_VTOL_FIXEDROTOR:
-			pos_thrust_motors_count = 5;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_HEXAROTOR:
-			pos_thrust_motors_count = 6;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_VTOL_TAILSITTER:
-			// this is the tricopter VTOL / quad plane with 3 motors and 2 servos
-			pos_thrust_motors_count = 3;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_OCTOROTOR:
-			pos_thrust_motors_count = 8;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_SUBMARINE:
-			pos_thrust_motors_count = 0;
-			is_fixed_wing = false;
-			break;
-
-		case MAV_TYPE_FIXED_WING:
-			pos_thrust_motors_count = 0;
-			is_fixed_wing = true;
-			break;
-
-		default:
-			pos_thrust_motors_count = 0;
-			is_fixed_wing = false;
-			break;
-		}
-
-		for (unsigned i = 0; i < actuator_outputs_s::NUM_ACTUATOR_OUTPUTS; i++) {
-			if (!armed) {
-				/* send 0 when disarmed and for disabled channels */
-				msg->controls[i] = 0.0f;
-
-			} else if ((is_fixed_wing && i == 4) ||
-				   (!is_fixed_wing && i < pos_thrust_motors_count)) {	//multirotor, rotor channel
-				/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to 0..1 for rotors */
-				msg->controls[i] = (_actuator_outputs.output[i] - PWM_DEFAULT_MIN) / (PWM_DEFAULT_MAX - PWM_DEFAULT_MIN);
-				msg->controls[i] = math::constrain(msg->controls[i], 0.f, 1.f);
-
-			} else {
-				const float pwm_center = (PWM_DEFAULT_MAX + PWM_DEFAULT_MIN) / 2;
-				const float pwm_delta = (PWM_DEFAULT_MAX - PWM_DEFAULT_MIN) / 2;
-
-				/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to -1..1 for other channels */
-				msg->controls[i] = (_actuator_outputs.output[i] - pwm_center) / pwm_delta;
-				msg->controls[i] = math::constrain(msg->controls[i], -1.f, 1.f);
-			}
+		} else {
+			const float pwm_center = (PWM_DEFAULT_MAX + PWM_DEFAULT_MIN) / 2;
+			const float pwm_delta = (PWM_DEFAULT_MAX - PWM_DEFAULT_MIN) / 2;
+			msg->controls[i] = (_actuator_outputs.output[i] - pwm_center) / pwm_delta;
+			msg->controls[i] = math::constrain(msg->controls[i], -1.f, 1.f);
 		}
 	}
 
@@ -527,6 +447,10 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 	uint64_t timestamp = hrt_absolute_time();
 
+	struct timespec ts;
+	abstime_to_ts(&ts, hil_state.time_usec);
+	px4_clock_settime(CLOCK_MONOTONIC, &ts);
+
 	/* angular velocity */
 	vehicle_angular_velocity_s hil_angular_velocity{};
 	{
@@ -550,6 +474,8 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 		// always publish ground truth attitude message
 		_attitude_ground_truth_pub.publish(hil_attitude);
+		int hilstate_multi;
+		orb_publish_auto(ORB_ID(vehicle_attitude), &_attitude_pub, &hil_attitude, &hilstate_multi);
 	}
 
 	/* global position */
@@ -557,12 +483,14 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 	{
 		hil_gpos.timestamp = timestamp;
 
-		hil_gpos.lat = hil_state.lat / 1E7;//1E7
-		hil_gpos.lon = hil_state.lon / 1E7;//1E7
+		hil_gpos.lat = double(hil_state.lat) / double(1E7);//1E7
+		hil_gpos.lon = double(hil_state.lon) / double(1E7);//1E7
 		hil_gpos.alt = hil_state.alt / 1E3;//1E3
 
 		// always publish ground truth attitude message
 		_gpos_ground_truth_pub.publish(hil_gpos);
+		int hil_gpos_multi;
+		orb_publish_auto(ORB_ID(vehicle_global_position), &_gpos_pub, &hil_gpos, &hil_gpos_multi);
 	}
 
 	/* local position */
@@ -607,6 +535,8 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 
 		// always publish ground truth attitude message
 		_lpos_ground_truth_pub.publish(hil_lpos);
+		int hil_lpos_multi;
+		orb_publish_auto(ORB_ID(vehicle_local_position), &_lpos_pub, &hil_lpos, &hil_lpos_multi);
 	}
 }
 

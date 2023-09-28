@@ -4063,8 +4063,8 @@ void Commander::estimator_check()
 		_heading_reset_counter = lpos.heading_reset_counter;
 	}
 
-	const bool mag_fault_prev = _estimator_status_flags_sub.get().cs_mag_fault;
-	const bool gnss_heading_fault_prev = _estimator_status_flags_sub.get().cs_gps_yaw_fault;
+	//const bool mag_fault_prev = _estimator_status_flags_sub.get().cs_mag_fault;
+	//const bool gnss_heading_fault_prev = _estimator_status_flags_sub.get().cs_gps_yaw_fault;
 
 	// use primary estimator_status
 	if (_estimator_selector_status_sub.updated()) {
@@ -4095,6 +4095,7 @@ void Commander::estimator_check()
 			_status_flags.position_reliant_on_vision_position = !gps && !optical_flow &&  vision_position;
 		}
 
+		/*
 		// Check for a magnetomer fault and notify the user
 		if (!mag_fault_prev && estimator_status_flags.cs_mag_fault) {
 			mavlink_log_critical(&_mavlink_log_pub, "Compass needs calibration - Land now!\t");
@@ -4109,6 +4110,7 @@ void Commander::estimator_check()
 				     "GNSS heading not reliable. Land now!");
 			set_health_flags(subsystem_info_s::SUBSYSTEM_TYPE_GPS, true, true, false, _status);
 		}
+		*/
 	}
 
 

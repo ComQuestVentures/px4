@@ -410,7 +410,7 @@ void EKF2Selector::PublishVehicleAttitude()
 			_delta_q_reset.copyTo(attitude.delta_q_reset);
 
 			attitude.timestamp = hrt_absolute_time();
-			_vehicle_attitude_pub.publish(attitude);
+			//_vehicle_attitude_pub.publish(attitude);
 		}
 	}
 }
@@ -521,7 +521,7 @@ void EKF2Selector::PublishVehicleLocalPosition()
 			local_position.delta_heading = _delta_heading_reset;
 
 			local_position.timestamp = hrt_absolute_time();
-			_vehicle_local_position_pub.publish(local_position);
+			//_vehicle_local_position_pub.publish(local_position);
 		}
 	}
 }
@@ -639,7 +639,7 @@ void EKF2Selector::PublishVehicleGlobalPosition()
 			global_position.delta_alt = _delta_alt_reset;
 
 			global_position.timestamp = hrt_absolute_time();
-			_vehicle_global_position_pub.publish(global_position);
+			//_vehicle_global_position_pub.publish(global_position);
 		}
 	}
 }

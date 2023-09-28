@@ -73,6 +73,7 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_command_ack.h>
+#include <uORB/topics/sensor_gyro.h>
 
 #include <random>
 
@@ -192,6 +193,13 @@ private:
 	uORB::Publication<irlock_report_s>		_irlock_report_pub{ORB_ID(irlock_report)};
 	uORB::Publication<vehicle_odometry_s>		_visual_odometry_pub{ORB_ID(vehicle_visual_odometry)};
 	uORB::Publication<vehicle_odometry_s>		_mocap_odometry_pub{ORB_ID(vehicle_mocap_odometry)};
+
+	orb_advert_t _gyro_pub{nullptr};
+	orb_advert_t _attitude_pub{nullptr};
+	orb_advert_t _gpos_pub{nullptr};
+	orb_advert_t _lpos_pub{nullptr};
+	orb_advert_t _accel_pub{nullptr};
+	orb_advert_t _airspeed_pub{nullptr};
 
 	uORB::Publication<vehicle_command_ack_s>	_command_ack_pub{ORB_ID(vehicle_command_ack)};
 

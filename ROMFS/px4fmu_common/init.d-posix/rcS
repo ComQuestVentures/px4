@@ -221,8 +221,8 @@ battery_simulator start
 tone_alarm start
 rc_update start
 manual_control start
-sensors start
-commander start
+sensors start -h
+commander start --hil
 
 # Configure vehicle type specific parameters.
 # Note: rc.vehicle_setup is the entry point for rc.interface,
